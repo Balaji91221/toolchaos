@@ -153,3 +153,7 @@ For a local package check, run `npm pack` and install the generated `toolchaos-0
 Tests cover injected faults, recovery strategies, MCP forwarding, run evidence, repeated runs, cancellation, and process cleanup. The CI badge links to current hosted results.
 
 Contributions are welcome through [issues](https://github.com/Balaji91221/toolchaos/issues) and pull requests. Read [CONTRIBUTING.md](https://github.com/Balaji91221/toolchaos/blob/main/CONTRIBUTING.md) before changing an adapter or assertion. Original code is available under the [MIT license](https://github.com/Balaji91221/toolchaos/blob/main/LICENSE).
+
+---
+
+Explore more of my work: [latest open-source tools](https://github.com/Balaji91221#latest-open-source-tools) · [recent projects](https://github.com/Balaji91221#recent-work).
