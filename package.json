@@ -39,8 +39,7 @@
     "SECURITY.md",
     "docs",
     "schemas",
-    "CONTRIBUTING.md",
-    "PROJECT_PLAN.md"
+    "CONTRIBUTING.md"
   ],
   "types": "./dist/index.d.ts",
   "dependencies": {

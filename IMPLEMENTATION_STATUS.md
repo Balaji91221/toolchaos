@@ -1,6 +1,6 @@
 # ToolChaos implementation status
 
-Package version 0.2.1; runtime behavior is unchanged from 0.2.0. See [feature matrix](FEATURE_MATRIX.md) for every in-scope plan phase and its tests.
+Package version 0.2.1; runtime behavior is unchanged from 0.2.0. See [feature matrix](FEATURE_MATRIX.md) for every implemented feature and its tests.
 
 All local in-scope first-release features are implemented. HTTP proxying, production fault injection, hosted dashboards, and model-judged verdicts remain out of scope. Live model quality, independent pilots, and exhaustive cross-platform execution are not claimed.
 

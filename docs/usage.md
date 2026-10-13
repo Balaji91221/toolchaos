@@ -71,7 +71,7 @@ The package exports compiled JavaScript and TypeScript declarations. Node.js 22.
 
 ## Design and current scope
 
-See [FEATURE_MATRIX.md](../FEATURE_MATRIX.md) for the implemented plan phases and [IMPLEMENTATION_STATUS.md](../IMPLEMENTATION_STATUS.md) for verification boundaries.
+See [FEATURE_MATRIX.md](../FEATURE_MATRIX.md) for the implemented features and [IMPLEMENTATION_STATUS.md](../IMPLEMENTATION_STATUS.md) for verification boundaries.
 
 ## Complete scenario runs
 

@@ -135,7 +135,7 @@ Use local fixtures or disposable services. POSIX cleanup covers descendants that
 | --- | --- |
 | [Usage and integration recipes](https://github.com/Balaji91221/toolchaos/blob/main/docs/usage.md) | [Architecture: HLD and LLD](https://github.com/Balaji91221/toolchaos/blob/main/docs/architecture.md) |
 | [Scenario JSON Schema](https://github.com/Balaji91221/toolchaos/blob/main/schemas/scenario.schema.json) | [Feature matrix](https://github.com/Balaji91221/toolchaos/blob/main/FEATURE_MATRIX.md) |
-| [Implementation and verification status](https://github.com/Balaji91221/toolchaos/blob/main/IMPLEMENTATION_STATUS.md) | [Original project plan](https://github.com/Balaji91221/toolchaos/blob/main/PROJECT_PLAN.md) |
+| [Implementation and verification status](https://github.com/Balaji91221/toolchaos/blob/main/IMPLEMENTATION_STATUS.md) | [Contribution guide](https://github.com/Balaji91221/toolchaos/blob/main/CONTRIBUTING.md) |
 
 ### Develop from source
 

@@ -1,6 +1,6 @@
 # ToolChaos feature completion matrix
 
-| Plan feature | Implementation | Evidence |
+| Feature | Implementation | Evidence |
 |---|---|---|
 | Scenario compilation and three faults | FaultHarness validation and proxy rules | `test/core.test.mjs; test/proxy.test.mjs` |
 | Transparent stdio transport | Negotiation/notification pass-through, typed request IDs | `test/proxy.test.mjs` |
