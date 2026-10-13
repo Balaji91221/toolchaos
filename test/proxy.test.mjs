@@ -1,6 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
+import { createInterface } from "node:readline";
 import { mkdtemp, writeFile, readFile, rm } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
@@ -98,20 +99,27 @@ test("notifications and initialization pass through", async () => {
 
 test(
   "proxy deadline cleans an owned descendant process group",
-  { timeout: 6000 },
+  { timeout: 12000 },
   async () => {
     const dir = await mkdtemp(path.join(os.tmpdir(), "chaos-group-"));
-    let descendant;
+    let descendant, p, closed, lines, readinessTimer;
+    let stderr = "";
     try {
-      const pidfile = path.join(dir, "child.pid");
       const parent = path.join(dir, "parent.cjs");
       await writeFile(
         parent,
-        `const {spawn}=require('node:child_process');const child=spawn(process.execPath,['-e',"process.on('SIGTERM',()=>{});setInterval(()=>{},1000)"],{stdio:'ignore'});require('node:fs').writeFileSync(${JSON.stringify(pidfile)},String(child.pid));setInterval(()=>{},1000);`,
+        `const {spawn}=require('node:child_process');
+const child=spawn(process.execPath,['-e',"process.on('SIGTERM',()=>{});process.send({ready:true});setInterval(()=>{},1000)"],{stdio:['ignore','ignore','ignore','ipc']});
+child.once('message',()=>console.log(JSON.stringify({jsonrpc:'2.0',method:'test/descendantReady',params:{pid:child.pid}})));
+setInterval(()=>{},1000);`,
       );
       const scenario = path.join(dir, "scenario.json");
-      await writeFile(scenario, JSON.stringify({ rules: [], timeoutMs: 500 }));
-      const p = spawn(process.execPath, [
+      const trace = path.join(dir, "trace.jsonl");
+      await writeFile(
+        scenario,
+        JSON.stringify({ rules: [], timeoutMs: 5000, tracePath: trace }),
+      );
+      p = spawn(process.execPath, [
         cli,
         "proxy",
         scenario,
@@ -119,25 +127,74 @@ test(
         process.execPath,
         parent,
       ]);
-      p.stdout.resume();
-      p.stderr.resume();
-      await new Promise((r) => setTimeout(r, 250));
-      descendant = Number(await readFile(pidfile, "utf8"));
-      const code = await new Promise((r) => p.on("close", r));
-      assert.equal(code, 2);
+      // Register completion immediately so an early exit cannot be missed.
+      closed = new Promise((resolve) =>
+        p.once("close", (code, signal) => resolve({ code, signal })),
+      );
+      p.stderr.on("data", (data) => (stderr += data));
+      lines = createInterface({ input: p.stdout });
+      const ready = new Promise((resolve, reject) => {
+        readinessTimer = setTimeout(
+          () => reject(new Error(`Descendant did not become ready: ${stderr}`)),
+          4000,
+        );
+        p.once("error", reject);
+        closed.then(({ code, signal }) =>
+          reject(
+            new Error(
+              `Proxy exited before readiness (${code}, ${signal}): ${stderr}`,
+            ),
+          ),
+        );
+        lines.on("line", (line) => {
+          try {
+            const message = JSON.parse(line);
+            if (message.method === "test/descendantReady")
+              resolve(message.params.pid);
+          } catch (error) {
+            reject(error);
+          }
+        });
+      });
+      // The descendant emits readiness only after its SIGTERM handler is installed.
+      descendant = await ready;
+      clearTimeout(readinessTimer);
+      assert.ok(Number.isSafeInteger(descendant) && descendant > 0);
+      process.kill(descendant, 0);
+      const { code, signal } = await closed;
+      assert.equal(code, 2, stderr);
+      assert.equal(signal, null, stderr);
+      const events = (await readFile(trace, "utf8"))
+        .trim()
+        .split("\n")
+        .map(JSON.parse);
+      assert.ok(events.some((event) => event.stage === "deadline_exceeded"));
       let alive = true;
-      for (let i = 0; i < 20; i++) {
+      const cleanupDeadline = Date.now() + 2000;
+      while (Date.now() < cleanupDeadline) {
         try {
           process.kill(descendant, 0);
-        } catch {
+        } catch (error) {
+          if (error.code !== "ESRCH") throw error;
           alive = false;
           break;
         }
-        await new Promise((r) => setTimeout(r, 25));
+        await new Promise((resolve) => setTimeout(resolve, 25));
       }
       assert.equal(alive, false, "Owned descendant should be terminated");
     } finally {
-      if (descendant)
+      clearTimeout(readinessTimer);
+      lines?.close();
+      if (p && p.exitCode === null && p.signalCode === null) {
+        p.kill("SIGTERM");
+        const force = setTimeout(() => p.kill("SIGKILL"), 2000);
+        try {
+          await closed;
+        } finally {
+          clearTimeout(force);
+        }
+      }
+      if (Number.isSafeInteger(descendant) && descendant > 0)
         try {
           process.kill(descendant, "SIGKILL");
         } catch {}
