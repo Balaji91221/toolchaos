@@ -1,19 +1,16 @@
 # ToolChaos usage guide
 
-**Package availability:** use the GitHub release tarball URL below. npm registry publication is pending; package imports and installed CLI names stay `toolchaos`.
-
-
 [← Project overview](../README.md) · [Architecture](architecture.md)
 
 Run commands from the repository root unless a section says to use a consuming project.
 
-Fault injection for agent tool calls. Package: `toolchaos@0.2.0` on npm; Node.js 22.18+ is required.
+Fault injection for agent tool calls. Package: `toolchaos@0.2.1` on npm; Node.js 22.18+ is required.
 
 
 ## Install the release package
 
 ```bash
-npm install https://github.com/Balaji91221/toolchaos/releases/download/v0.2.0/toolchaos-0.2.0.tgz
+npm install toolchaos@0.2.1
 npx toolchaos demo
 ```
 
@@ -50,10 +47,10 @@ The SDK signals a lost response by throwing `FaultError` **after** upstream exec
 ### Put the stdio proxy in front of a test MCP server
 
 ```bash
-node dist/cli.js proxy examples/lost-response.json -- node /absolute/path/to/server.js
+npx --yes toolchaos@0.2.1 proxy /absolute/path/to/lost-response.json -- node /absolute/path/to/server.js
 ```
 
-Configure the assistant to launch this command instead of the upstream server. The proxy forwards MCP negotiation without implementing a server of its own. It injects faults only into `tools/call` requests; notifications and server-initiated messages pass through. The target server must use newline-delimited stdio JSON-RPC.
+Copy the included `examples/lost-response.json` configuration to the absolute path above, then configure the assistant to launch this command instead of the upstream server. The proxy forwards MCP negotiation without implementing a server of its own. It injects faults only into `tools/call` requests; notifications and server-initiated messages pass through. The target server must use newline-delimited stdio JSON-RPC.
 
 Scenario fields: `rules` (required), `timeoutMs` (default 30000, max 3600000), and optional `tracePath`. Trace files are created exclusively, with restrictive permissions, and contain stage/ID/tool metadata rather than raw arguments/results. A proxy deadline or malformed frame exits 2. On POSIX, the proxy terminates the owned process group at shutdown, including descendants that remain in that group. Detached or deliberately escaped processes require an OS sandbox.
 

@@ -49,13 +49,11 @@ An agent creates a support ticket. The service saves it, but the response disapp
 
 ## Quick start
 
-**Install from the GitHub release below.** The compiled package is ready to use; npm registry publication is pending.
-
 
 Requires **Node.js 22.18+**. In your Node project or an empty working directory, install the package and run its included synthetic ticket scenario. No model API key is needed.
 
 ```bash
-npm install https://github.com/Balaji91221/toolchaos/releases/download/v0.2.0/toolchaos-0.2.0.tgz
+npm install toolchaos@0.2.1
 
 # The runner creates its output directory, so give it a fresh child path.
 demo_root="$(mktemp -d)"
@@ -101,10 +99,10 @@ For your own tools, `FaultHarness` wraps an async `(name, args) => result` funct
 
 ### MCP proxy
 
-Launch a **disposable test MCP server** through the proxy:
+Copy `node_modules/toolchaos/examples/lost-response.json` to a known absolute path. Launch a **disposable test MCP server** through the pinned proxy command:
 
 ```bash
-npx toolchaos proxy node_modules/toolchaos/examples/lost-response.json -- \
+npx --yes toolchaos@0.2.1 proxy /absolute/path/to/lost-response.json -- \
   node /absolute/path/to/test-mcp-server.js
 ```
 
@@ -150,7 +148,7 @@ npm run build
 npm test
 ```
 
-For a local package check, run `npm pack` and install the generated `toolchaos-0.2.0.tgz` in an empty consuming project. Publishing is a separate release action.
+For a local package check, run `npm pack` and install the generated `toolchaos-0.2.1.tgz` in an empty consuming project. Publishing is a separate release action.
 
 Tests cover injected faults, recovery strategies, MCP forwarding, run evidence, repeated runs, cancellation, and process cleanup. The CI badge links to current hosted results.
 
