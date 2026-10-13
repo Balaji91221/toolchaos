@@ -4,7 +4,7 @@
 
 <p align="center">
   <a href="https://github.com/Balaji91221/toolchaos/actions/workflows/ci.yml"><img src="https://github.com/Balaji91221/toolchaos/actions/workflows/ci.yml/badge.svg" alt="GitHub Actions CI"></a>
-  <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue" alt="MIT license"></a>
+  <a href="https://github.com/Balaji91221/toolchaos/blob/main/LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue" alt="MIT license"></a>
   <a href="#quick-start"><img src="https://img.shields.io/badge/Node.js-%3E%3D22.18-339933" alt="Node.js 22.18 or newer"></a>
   <a href="#usage"><img src="https://img.shields.io/badge/SDK-TypeScript-3178C6" alt="TypeScript SDK"></a>
   <a href="#mcp-proxy"><img src="https://img.shields.io/badge/MCP-stdio%20proxy-6750A4" alt="MCP stdio proxy"></a>
@@ -18,7 +18,7 @@
   <a href="#docs">Docs</a>
 </p>
 
-![ToolChaos workflow: inject a fault, observe agent recovery, and check the final state](docs/assets/overview.svg)
+![ToolChaos workflow: inject a fault, observe agent recovery, and check the final state](https://raw.githubusercontent.com/Balaji91221/toolchaos/main/docs/assets/overview.svg)
 
 ## Why I built it
 
@@ -49,29 +49,29 @@ An agent creates a support ticket. The service saves it, but the response disapp
 
 ## Quick start
 
-Requires **Node.js 22.18+**. The example uses synthetic tickets and needs no model API key.
+**Install from the GitHub release below.** The compiled package is ready to use; npm registry publication is pending.
+
+
+Requires **Node.js 22.18+**. In your Node project or an empty working directory, install the package and run its included synthetic ticket scenario. No model API key is needed.
 
 ```bash
-git clone https://github.com/Balaji91221/toolchaos.git
-cd toolchaos
-npm ci
-npm run build
+npm install https://github.com/Balaji91221/toolchaos/releases/download/v0.2.0/toolchaos-0.2.0.tgz
 
 # The runner creates its output directory, so give it a fresh child path.
 demo_root="$(mktemp -d)"
-node dist/cli.js scenario examples/scenario.json reconcile "$demo_root/recovery"
+npx toolchaos scenario node_modules/toolchaos/examples/scenario.json reconcile "$demo_root/recovery"
 ```
 
 Expected result: **`PASS`**, `status: "completed"`, and one ticket. Open `report.html` inside the printed output directory to inspect the evidence.
 
-![Formatted ToolChaos fixture result showing recovery evidence](docs/assets/demo.png)
+![Formatted ToolChaos fixture result showing recovery evidence](https://raw.githubusercontent.com/Balaji91221/toolchaos/main/docs/assets/demo.png)
 
-*Formatted summary of an actual local reference run, generated with the [documentation helper](docs/assets/README.md). No live model call.*
+*Formatted summary of an actual local reference run, generated with the [documentation helper](https://github.com/Balaji91221/toolchaos/blob/main/docs/assets/README.md). No live model call.*
 
 Compare all three strategies without creating report files:
 
 ```bash
-npm run demo
+npx toolchaos demo
 ```
 
 | Reference strategy | Expected verdict | Final tickets |
@@ -84,20 +84,12 @@ The demo command exits 0 when it executes successfully, even though it includes 
 
 ## Usage
 
-### Install the SDK in another project
+### Use the installed SDK
 
-Version **0.2.0** is available as source. It is **not published to npm**; the scoped name below identifies the local package.
-
-```bash
-# In this repository; npm pack builds the compiled package.
-npm pack
-
-# In your consuming project:
-npm install /absolute/path/to/ai-opensource-local-toolchaos-0.2.0.tgz
-```
+The `toolchaos` package includes compiled ESM JavaScript, TypeScript declarations, the CLI, and example scenarios. Save this as an `.mjs` file, or use a project with `"type": "module"`:
 
 ```js
-import { runRecovery } from '@ai-opensource-local/toolchaos';
+import { runRecovery } from 'toolchaos';
 
 const result = await runRecovery('reconcile');
 console.log(result.verdict);        // PASS
@@ -105,66 +97,61 @@ console.log(result.tickets.length); // 1
 console.log(result.events);         // Fault and recovery sequence
 ```
 
-For your own tools, `FaultHarness` wraps an async `(name, args) => result` function. For complete agent runs, `runScenario` accepts an `AgentAdapter`. The [usage guide](docs/usage.md) covers both, repeated runs, and the optional Anthropic adapter.
+For your own tools, `FaultHarness` wraps an async `(name, args) => result` function. For complete agent runs, `runScenario` accepts an `AgentAdapter`. The [usage guide](https://github.com/Balaji91221/toolchaos/blob/main/docs/usage.md) covers both, repeated runs, and the optional Anthropic adapter.
 
 ### MCP proxy
 
 Launch a **disposable test MCP server** through the proxy:
 
 ```bash
-node dist/cli.js proxy examples/lost-response.json -- \
+npx toolchaos proxy node_modules/toolchaos/examples/lost-response.json -- \
   node /absolute/path/to/test-mcp-server.js
 ```
 
 Configure the MCP client to launch that command instead of the upstream server. ToolChaos forwards the server's existing tools; it does not add `toolchaos_*` tools. The bundled ticket fixture exposes `create_ticket` and `find_ticket`.
 
-The proxy deadline bounds the whole session. A client's request timeout must be shorter to leave time for recovery after a dropped response. The scenario runner configures these bounds for you. See [MCP connection details](docs/usage.md#put-the-stdio-proxy-in-front-of-a-test-mcp-server).
+The proxy deadline bounds the whole session. A client's request timeout must be shorter to leave time for recovery after a dropped response. The scenario runner configures these bounds for you. See [MCP connection details](https://github.com/Balaji91221/toolchaos/blob/main/docs/usage.md#put-the-stdio-proxy-in-front-of-a-test-mcp-server).
 
 ## Architecture
 
-```mermaid
-flowchart LR
-    Runner[Scenario runner] --> Agent[Reference or model adapter]
-    Agent --> Client[MCP client]
-    Client <--> Proxy[Fault proxy]
-    Proxy <--> Fixture[Local ticket fixture]
-    Proxy --> Trace[Event trace]
-    Fixture --> State[Final ticket state]
-    Trace --> Checks[Deterministic assertions]
-    State --> Checks
-    Checks --> Report[Manifest and HTML report]
-```
-
 | Component | Responsibility |
 | --- | --- |
-| [`src/index.ts`](src/index.ts) | Function-level fault injection and recovery examples |
-| [`src/proxy.ts`](src/proxy.ts) | Faults in newline-delimited MCP traffic and subprocess cleanup |
-| [`src/runner.ts`](src/runner.ts) | Run limits, fixture lifecycle, assertions, and evidence |
-| [`src/agent.ts`](src/agent.ts) | Reference strategies and the optional model adapter |
-| [`src/fixture.ts`](src/fixture.ts) | Synthetic ticket state and operation-key deduplication |
-| [`src/history.ts`](src/history.ts) | Repeated runs and the SQLite manifest index |
+| [`src/index.ts`](https://github.com/Balaji91221/toolchaos/blob/main/src/index.ts) | Function-level fault injection and recovery examples |
+| [`src/proxy.ts`](https://github.com/Balaji91221/toolchaos/blob/main/src/proxy.ts) | Faults in newline-delimited MCP traffic and subprocess cleanup |
+| [`src/runner.ts`](https://github.com/Balaji91221/toolchaos/blob/main/src/runner.ts) | Run limits, fixture lifecycle, assertions, and evidence |
+| [`src/agent.ts`](https://github.com/Balaji91221/toolchaos/blob/main/src/agent.ts) | Reference strategies and the optional model adapter |
+| [`src/fixture.ts`](https://github.com/Balaji91221/toolchaos/blob/main/src/fixture.ts) | Synthetic ticket state and operation-key deduplication |
+| [`src/history.ts`](https://github.com/Balaji91221/toolchaos/blob/main/src/history.ts) | Repeated runs and the SQLite manifest index |
 
-Read the [HLD and LLD](docs/architecture.md) for contracts, state ownership, failure semantics, and design tradeoffs.
+Read the [HLD and LLD](https://github.com/Balaji91221/toolchaos/blob/main/docs/architecture.md) for contracts, state ownership, failure semantics, and design tradeoffs.
 
 ### Boundaries
 
 The built-in scenario runner evaluates the bundled ticket fixture; it is not a general benchmark for every external service. The proxy supports newline-delimited stdio MCP, not HTTP MCP. The SDK represents a lost reply by throwing after execution; the proxy actually withholds the reply.
 
-Use local fixtures or disposable services. POSIX cleanup covers descendants that remain in the owned process group; it is not a hostile-code sandbox. Live-model quality and production reliability need separate evaluation. See [security guidance](SECURITY.md).
+Use local fixtures or disposable services. POSIX cleanup covers descendants that remain in the owned process group; it is not a hostile-code sandbox. Live-model quality and production reliability need separate evaluation. See [security guidance](https://github.com/Balaji91221/toolchaos/blob/main/SECURITY.md).
 
 ## Docs
 
 | Start here | Go deeper |
 | --- | --- |
-| [Usage and integration recipes](docs/usage.md) | [Architecture: HLD and LLD](docs/architecture.md) |
-| [Scenario JSON Schema](schemas/scenario.schema.json) | [Feature matrix](FEATURE_MATRIX.md) |
-| [Implementation and verification status](IMPLEMENTATION_STATUS.md) | [Original project plan](PROJECT_PLAN.md) |
+| [Usage and integration recipes](https://github.com/Balaji91221/toolchaos/blob/main/docs/usage.md) | [Architecture: HLD and LLD](https://github.com/Balaji91221/toolchaos/blob/main/docs/architecture.md) |
+| [Scenario JSON Schema](https://github.com/Balaji91221/toolchaos/blob/main/schemas/scenario.schema.json) | [Feature matrix](https://github.com/Balaji91221/toolchaos/blob/main/FEATURE_MATRIX.md) |
+| [Implementation and verification status](https://github.com/Balaji91221/toolchaos/blob/main/IMPLEMENTATION_STATUS.md) | [Original project plan](https://github.com/Balaji91221/toolchaos/blob/main/PROJECT_PLAN.md) |
+
+### Develop from source
 
 ```bash
+git clone https://github.com/Balaji91221/toolchaos.git
+cd toolchaos
+npm ci
 npm run typecheck
+npm run build
 npm test
 ```
 
+For a local package check, run `npm pack` and install the generated `toolchaos-0.2.0.tgz` in an empty consuming project. Publishing is a separate release action.
+
 Tests cover injected faults, recovery strategies, MCP forwarding, run evidence, repeated runs, cancellation, and process cleanup. The CI badge links to current hosted results.
 
-Contributions are welcome through [issues](https://github.com/Balaji91221/toolchaos/issues) and pull requests. Read [CONTRIBUTING.md](CONTRIBUTING.md) before changing an adapter or assertion. Original code is available under the [MIT license](LICENSE).
+Contributions are welcome through [issues](https://github.com/Balaji91221/toolchaos/issues) and pull requests. Read [CONTRIBUTING.md](https://github.com/Balaji91221/toolchaos/blob/main/CONTRIBUTING.md) before changing an adapter or assertion. Original code is available under the [MIT license](https://github.com/Balaji91221/toolchaos/blob/main/LICENSE).

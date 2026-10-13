@@ -1,7 +1,6 @@
 {
-  "name": "@ai-opensource-local/toolchaos",
+  "name": "toolchaos",
   "version": "0.2.0",
-  "private": true,
   "description": "Deterministic fault injection and recovery assertions",
   "type": "module",
   "engines": {
@@ -19,7 +18,7 @@
   },
   "scripts": {
     "test": "node --test test/*.test.mjs",
-    "demo": "node src/cli.ts demo",
+    "demo": "node dist/cli.js demo",
     "typecheck": "tsc --noEmit",
     "build": "tsc -p tsconfig.build.json",
     "prepack": "npm run build",
@@ -39,11 +38,33 @@
     "CHANGELOG.md",
     "SECURITY.md",
     "docs",
-    "schemas"
+    "schemas",
+    "CONTRIBUTING.md",
+    "PROJECT_PLAN.md"
   ],
   "types": "./dist/index.d.ts",
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.32.1"
   },
-  "license": "MIT"
+  "license": "MIT",
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Balaji91221/toolchaos.git"
+  },
+  "homepage": "https://github.com/Balaji91221/toolchaos#readme",
+  "bugs": {
+    "url": "https://github.com/Balaji91221/toolchaos/issues"
+  },
+  "keywords": [
+    "ai",
+    "agents",
+    "mcp",
+    "fault-injection",
+    "testing",
+    "reliability"
+  ]
 }

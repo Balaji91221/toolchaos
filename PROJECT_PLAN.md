@@ -2,7 +2,7 @@
 
 Fault testing for tool-calling agents.
 
-**Status:** Local 0.2.0 roadmap implementation delivered. See [feature matrix](FEATURE_MATRIX.md), [implementation status](IMPLEMENTATION_STATUS.md), and [actual interfaces](README.md). External pilots, live model quality and npm registry publication remain separate verification/release work. **Planning date:** 13 October 2026. Package names and interfaces below are illustrative and must be checked before npm registry publication.
+**Status:** Local 0.2.0 roadmap implementation delivered. See [feature matrix](FEATURE_MATRIX.md), [implementation status](IMPLEMENTATION_STATUS.md), and [actual interfaces](README.md). External pilots and live model quality remain separate verification work. **Planning date:** 13 October 2026. Current package identity: `toolchaos`; use the README for the implemented interfaces below.
 
 ## Goal and target users
 

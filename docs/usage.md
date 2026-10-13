@@ -1,10 +1,23 @@
 # ToolChaos usage guide
 
+**Package availability:** use the GitHub release tarball URL below. npm registry publication is pending; package imports and installed CLI names stay `toolchaos`.
+
+
 [← Project overview](../README.md) · [Architecture](architecture.md)
 
 Run commands from the repository root unless a section says to use a consuming project.
 
-Fault injection for agent tool calls. Local development release 0.2.0; not published to npm.
+Fault injection for agent tool calls. Package: `toolchaos@0.2.0` on npm; Node.js 22.18+ is required.
+
+
+## Install the release package
+
+```bash
+npm install https://github.com/Balaji91221/toolchaos/releases/download/v0.2.0/toolchaos-0.2.0.tgz
+npx toolchaos demo
+```
+
+The package ships compiled ESM JavaScript and TypeScript declarations. The source-checkout recipes below assume you have cloned the repository; installed examples are also available under `node_modules/toolchaos/examples/`.
 
 ## Quick start and usage
 
@@ -24,7 +37,7 @@ node dist/cli.js run idempotent report.html  # exit 0: one effect
 ### Use the library
 
 ```ts
-import { FaultHarness } from '@ai-opensource-local/toolchaos';
+import { FaultHarness } from 'toolchaos';
 const harness = new FaultHarness(
   async (name, args) => myToolClient.call(name, args),
   [{ tool: 'create_ticket', occurrence: 1, fault: 'drop_response_after_forward' }],
@@ -57,7 +70,7 @@ npm pack
 npm install /absolute/path/to/generated-package.tgz
 ```
 
-The package exports compiled JavaScript and TypeScript declarations. Node.js 22.18 or newer is required. `npm ci` uses the committed dependency lockfile. `npm run typecheck` checks the source; `npm run build` creates `dist/`. The package is marked private to prevent accidental publication. Original code is MIT licensed. Selecting an available public name and publishing remain explicit release tasks; dependencies retain their own licenses.
+The package exports compiled JavaScript and TypeScript declarations. Node.js 22.18 or newer is required. `npm ci` uses the committed dependency lockfile. `npm run typecheck` checks the source; `npm run build` creates `dist/`. The public package is named `toolchaos`; its executable is `toolchaos`. Original code is MIT licensed and dependencies retain their own licenses. Publication remains an explicit maintainer release action.
 
 ## Design and current scope
 
@@ -89,7 +102,7 @@ node dist/cli.js scenario examples/scenario.json anthropic /tmp/toolchaos-model-
 Live calls incur provider usage and send the scenario/task and tool results to that provider. No live paid request was made during local verification. The adapter protocol is integration-tested against a controlled HTTP provider; model quality must be measured separately with repeated runs.
 
 ```ts
-import { runScenario, ReferenceAgent } from '@ai-opensource-local/toolchaos';
+import { runScenario, ReferenceAgent } from 'toolchaos';
 const result = await runScenario(scenario, new ReferenceAgent('reconcile'), '/tmp/new-run');
 ```
 

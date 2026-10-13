@@ -12,6 +12,6 @@
 
 ## Release boundary
 
-All local in-scope first-release features are implemented. HTTP proxying, production fault injection, hosted dashboards, and model-judged verdicts remain out of scope. Live model quality, independent pilots, public registry publication, and cross-platform execution are not claimed.
+All local in-scope first-release features are implemented. HTTP proxying, production fault injection, hosted dashboards, and model-judged verdicts remain out of scope. Live model quality, independent pilots, and exhaustive cross-platform execution are not claimed.
 
 CI definitions, contribution/security guidance, and package-build instructions are included. A checked-in workflow is not evidence of a remote CI run.

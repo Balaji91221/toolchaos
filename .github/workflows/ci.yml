@@ -23,4 +23,4 @@ jobs:
           cd "$(mktemp -d)"
           npm init -y
           npm install "$artifact"
-          node --input-type=module -e "await import('@ai-opensource-local/toolchaos')"
+          node --input-type=module -e "await import('toolchaos')"
