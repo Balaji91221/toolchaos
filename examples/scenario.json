@@ -1,0 +1,5 @@
+{
+ "schemaVersion":1,"id":"lost-response-ticket","task":"Create one ticket titled Payment failed, without duplicates.",
+ "rules":[{"tool":"create_ticket","occurrence":1,"fault":"drop_response_after_forward"}],
+ "timeoutMs":10000,"toolTimeoutMs":250,"expectedTickets":1,"maxToolCalls":5
+}

@@ -1,0 +1,70 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "required": [
+    "schemaVersion",
+    "id",
+    "task",
+    "rules",
+    "expectedTickets"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "const": 1
+    },
+    "id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "task": {
+      "type": "string",
+      "minLength": 1
+    },
+    "expectedTickets": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "timeoutMs": {
+      "type": "number",
+      "minimum": 100,
+      "maximum": 600000
+    },
+    "toolTimeoutMs": {
+      "type": "number",
+      "minimum": 10
+    },
+    "maxToolCalls": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 1000
+    },
+    "rules": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "tool",
+          "occurrence",
+          "fault"
+        ],
+        "properties": {
+          "tool": {
+            "type": "string",
+            "minLength": 1
+          },
+          "occurrence": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "fault": {
+            "enum": [
+              "error_before_forward",
+              "drop_response_after_forward",
+              "replace_response"
+            ]
+          }
+        }
+      }
+    }
+  }
+}

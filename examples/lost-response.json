@@ -1,0 +1,10 @@
+{
+  "timeoutMs": 30000,
+  "rules": [
+    {
+      "tool": "create_ticket",
+      "occurrence": 1,
+      "fault": "drop_response_after_forward"
+    }
+  ]
+}

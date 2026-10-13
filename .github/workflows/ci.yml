@@ -1,0 +1,26 @@
+name: local-package
+on: [push, pull_request]
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node: ['22.18.0', '24']
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+          cache: npm
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm run build
+      - run: npm test
+      - run: npm pack
+      - name: Clean install of compiled package
+        run: |
+          artifact=$(realpath *.tgz)
+          cd "$(mktemp -d)"
+          npm init -y
+          npm install "$artifact"
+          node --input-type=module -e "await import('@ai-opensource-local/toolchaos')"
