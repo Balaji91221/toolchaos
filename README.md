@@ -1,111 +1,170 @@
-# ToolChaos
+<h1 align="center">ToolChaos</h1>
+<p align="center"><strong>Make tool failures reproducible. Make recovery measurable.</strong></p>
+<p align="center">An SDK, CLI, and MCP proxy for testing what an AI agent does when a tool fails, replies incorrectly, or completes an action whose response never arrives.</p>
 
-Fault injection for agent tool calls. Local development release 0.2.0; not published to npm.
+<p align="center">
+  <a href="https://github.com/Balaji91221/toolchaos/actions/workflows/ci.yml"><img src="https://github.com/Balaji91221/toolchaos/actions/workflows/ci.yml/badge.svg" alt="GitHub Actions CI"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue" alt="MIT license"></a>
+  <a href="#quick-start"><img src="https://img.shields.io/badge/Node.js-%3E%3D22.18-339933" alt="Node.js 22.18 or newer"></a>
+  <a href="#usage"><img src="https://img.shields.io/badge/SDK-TypeScript-3178C6" alt="TypeScript SDK"></a>
+  <a href="#mcp-proxy"><img src="https://img.shields.io/badge/MCP-stdio%20proxy-6750A4" alt="MCP stdio proxy"></a>
+</p>
 
-## Quick start and usage
+<p align="center">
+  <a href="#why-i-built-it">Why</a> ·
+  <a href="#quick-start">Quick start</a> ·
+  <a href="#usage">Usage</a> ·
+  <a href="#architecture">Architecture</a> ·
+  <a href="#docs">Docs</a>
+</p>
+
+![ToolChaos workflow: inject a fault, observe agent recovery, and check the final state](docs/assets/overview.svg)
+
+## Why I built it
+
+I built ToolChaos to focus on a practical AI engineering problem: an agent can say a task succeeded while leaving the wrong state behind. A successful tool call is only one part of the story. Retries, timeouts, and uncertain outcomes need their own tests.
+
+The goal is to turn recovery behavior into something I can inspect: the fault that happened, the calls that followed, and the result in the test service. It is useful when building tool-using agents, MCP integrations, or recovery logic.
+
+## The problem → the solution
+
+An agent creates a support ticket. The service saves it, but the response disappears. The agent retries with a new operation key and creates a second ticket.
+
+**ToolChaos reproduces that sequence and checks the stored tickets.** A convincing final answer does not override a failing assertion.
+
+| What can go wrong? | What ToolChaos gives you |
+| --- | --- |
+| A tool fails before doing any work | A repeatable pre-execution error |
+| An action succeeds but its reply disappears | A lost-response fault and visible recovery trace |
+| A reply has an unexpected shape | A malformed-result fault |
+| A test never reaches the intended fault | An `INCONCLUSIVE` result instead of a pass |
+
+### Core capabilities
+
+- **Three fault types:** fail before forwarding, drop a committed response, or replace its payload.
+- **Two integration levels:** wrap a function with the SDK or put a stdio proxy in front of an MCP server.
+- **Complete local scenarios:** run reference recovery strategies against an isolated ticket fixture with time and call limits.
+- **Evidence you can inspect:** save assertions, final state, tool schemas, event traces, and an HTML report.
+- **Repeated runs:** use fresh fixtures and collect manifest metadata in a local SQLite index.
+
+## Quick start
+
+Requires **Node.js 22.18+**. The example uses synthetic tickets and needs no model API key.
 
 ```bash
 git clone https://github.com/Balaji91221/toolchaos.git
 cd toolchaos
 npm ci
 npm run build
-npm test
+
+# The runner creates its output directory, so give it a fresh child path.
+demo_root="$(mktemp -d)"
+node dist/cli.js scenario examples/scenario.json reconcile "$demo_root/recovery"
+```
+
+Expected result: **`PASS`**, `status: "completed"`, and one ticket. Open `report.html` inside the printed output directory to inspect the evidence.
+
+![Formatted ToolChaos fixture result showing recovery evidence](docs/assets/demo.png)
+
+*Formatted summary of an actual local reference run, generated with the [documentation helper](docs/assets/README.md). No live model call.*
+
+Compare all three strategies without creating report files:
+
+```bash
 npm run demo
-node dist/cli.js run naive report.html       # exit 1: expected duplicate
-node dist/cli.js run idempotent report.html  # exit 0: one effect
 ```
 
-`demo` runs all three reference clients and exits zero when the demo executes. `run` returns 0 for PASS, 1 for FAIL, and 2 for invalid input/infrastructure errors. Reports are written only when explicitly requested.
+| Reference strategy | Expected verdict | Final tickets |
+| --- | --- | --- |
+| `naive` — retries with a new operation key | `FAIL` | 2 |
+| `idempotent` — reuses the operation key | `PASS` | 1 |
+| `reconcile` — checks whether the action already happened | `PASS` | 1 |
 
-### Use the library
+The demo command exits 0 when it executes successfully, even though it includes the intentional failing strategy. Individual scenario commands return 0 for `PASS`, 1 for `FAIL`, and 2 for `INCONCLUSIVE` or an input/infrastructure error.
 
-```ts
-import { FaultHarness } from '@ai-opensource-local/toolchaos';
-const harness = new FaultHarness(
-  async (name, args) => myToolClient.call(name, args),
-  [{ tool: 'create_ticket', occurrence: 1, fault: 'drop_response_after_forward' }],
-);
-await harness.call('create_ticket', { title: 'Example', operationKey: 'op-1' });
-```
+## Usage
 
-The SDK signals a lost response by throwing `FaultError` **after** upstream execution. It does not emulate the passage of client timeout time. The protocol proxy below actually withholds the response.
+### Install the SDK in another project
 
-### Put the stdio proxy in front of a test MCP server
+Version **0.2.0** is available as source. It is **not published to npm**; the scoped name below identifies the local package.
 
 ```bash
-node dist/cli.js proxy examples/lost-response.json -- node /absolute/path/to/server.js
-```
-
-Configure the assistant to launch this command instead of the upstream server. The proxy forwards MCP negotiation without implementing a server of its own. It injects faults only into `tools/call` requests; notifications and server-initiated messages pass through. The target server must use newline-delimited stdio JSON-RPC.
-
-Scenario fields: `rules` (required), `timeoutMs` (default 30000, max 3600000), and optional `tracePath`. Trace files are created exclusively, with restrictive permissions, and contain stage/ID/tool metadata rather than raw arguments/results. A proxy deadline or malformed frame exits 2. On POSIX, the proxy terminates the owned process group at shutdown, including descendants that remain in that group. Detached or deliberately escaped processes require an OS sandbox.
-
-Only run fault scenarios against local fixtures or disposable test services. No automatic live service modifications are part of the demo.
-
-## Local installation in another project
-
-Build and package this source folder, then install the resulting tarball in your consuming project:
-
-```bash
-npm run build
+# In this repository; npm pack builds the compiled package.
 npm pack
-# In the consuming project:
-npm install /absolute/path/to/generated-package.tgz
+
+# In your consuming project:
+npm install /absolute/path/to/ai-opensource-local-toolchaos-0.2.0.tgz
 ```
 
-The package exports compiled JavaScript and TypeScript declarations. Node.js 22.18 or newer is required. `npm ci` uses the committed dependency lockfile. `npm run typecheck` checks the source; `npm run build` creates `dist/`. The package is marked private to prevent accidental publication. Original code is MIT licensed. Selecting an available public name and publishing remain explicit release tasks; dependencies retain their own licenses.
+```js
+import { runRecovery } from '@ai-opensource-local/toolchaos';
 
-## Design and current scope
+const result = await runRecovery('reconcile');
+console.log(result.verdict);        // PASS
+console.log(result.tickets.length); // 1
+console.log(result.events);         // Fault and recovery sequence
+```
 
-See [FEATURE_MATRIX.md](FEATURE_MATRIX.md) for the implemented plan phases and [IMPLEMENTATION_STATUS.md](IMPLEMENTATION_STATUS.md) for verification boundaries.
+For your own tools, `FaultHarness` wraps an async `(name, args) => result` function. For complete agent runs, `runScenario` accepts an `AgentAdapter`. The [usage guide](docs/usage.md) covers both, repeated runs, and the optional Anthropic adapter.
 
-## Complete scenario runs
+### MCP proxy
+
+Launch a **disposable test MCP server** through the proxy:
 
 ```bash
-npm ci
-npm run build
+node dist/cli.js proxy examples/lost-response.json -- \
+  node /absolute/path/to/test-mcp-server.js
+```
+
+Configure the MCP client to launch that command instead of the upstream server. ToolChaos forwards the server's existing tools; it does not add `toolchaos_*` tools. The bundled ticket fixture exposes `create_ticket` and `find_ticket`.
+
+The proxy deadline bounds the whole session. A client's request timeout must be shorter to leave time for recovery after a dropped response. The scenario runner configures these bounds for you. See [MCP connection details](docs/usage.md#put-the-stdio-proxy-in-front-of-a-test-mcp-server).
+
+## Architecture
+
+```mermaid
+flowchart LR
+    Runner[Scenario runner] --> Agent[Reference or model adapter]
+    Agent --> Client[MCP client]
+    Client <--> Proxy[Fault proxy]
+    Proxy <--> Fixture[Local ticket fixture]
+    Proxy --> Trace[Event trace]
+    Fixture --> State[Final ticket state]
+    Trace --> Checks[Deterministic assertions]
+    State --> Checks
+    Checks --> Report[Manifest and HTML report]
+```
+
+| Component | Responsibility |
+| --- | --- |
+| [`src/index.ts`](src/index.ts) | Function-level fault injection and recovery examples |
+| [`src/proxy.ts`](src/proxy.ts) | Faults in newline-delimited MCP traffic and subprocess cleanup |
+| [`src/runner.ts`](src/runner.ts) | Run limits, fixture lifecycle, assertions, and evidence |
+| [`src/agent.ts`](src/agent.ts) | Reference strategies and the optional model adapter |
+| [`src/fixture.ts`](src/fixture.ts) | Synthetic ticket state and operation-key deduplication |
+| [`src/history.ts`](src/history.ts) | Repeated runs and the SQLite manifest index |
+
+Read the [HLD and LLD](docs/architecture.md) for contracts, state ownership, failure semantics, and design tradeoffs.
+
+### Boundaries
+
+The built-in scenario runner evaluates the bundled ticket fixture; it is not a general benchmark for every external service. The proxy supports newline-delimited stdio MCP, not HTTP MCP. The SDK represents a lost reply by throwing after execution; the proxy actually withholds the reply.
+
+Use local fixtures or disposable services. POSIX cleanup covers descendants that remain in the owned process group; it is not a hostile-code sandbox. Live-model quality and production reliability need separate evaluation. See [security guidance](SECURITY.md).
+
+## Docs
+
+| Start here | Go deeper |
+| --- | --- |
+| [Usage and integration recipes](docs/usage.md) | [Architecture: HLD and LLD](docs/architecture.md) |
+| [Scenario JSON Schema](schemas/scenario.schema.json) | [Feature matrix](FEATURE_MATRIX.md) |
+| [Implementation and verification status](IMPLEMENTATION_STATUS.md) | [Original project plan](PROJECT_PLAN.md) |
+
+```bash
+npm run typecheck
 npm test
-node dist/cli.js scenario examples/scenario.json idempotent /tmp/toolchaos-run-001
-node dist/cli.js scenario examples/scenario.json naive /tmp/toolchaos-run-002
 ```
 
-Choose a fresh output directory for every run. `idempotent` and `reconcile` should pass; `naive` should fail the one-ticket assertion. Each run launches a real MCP client, a stdio fault proxy, and an isolated ticket server. The manifest records scenario/config hashes, tool schemas, adapter metadata, final fixture state, assertion results, event evidence, runtime, and duration. A scenario whose configured fault was not exercised is INCONCLUSIVE. The coordinator bounds time and tool calls; POSIX proxy shutdown terminates its owned process group. Windows process-tree semantics have not been verified.
+Tests cover injected faults, recovery strategies, MCP forwarding, run evidence, repeated runs, cancellation, and process cleanup. The CI badge links to current hosted results.
 
-`manifest.json`, `snapshot.json`, `trace.jsonl`, and `report.html` are created in the run directory. Trace events contain IDs, tool names, occurrence numbers, and stages, not raw arguments. The fixture snapshot contains synthetic ticket data. User-provided agent metadata is included verbatim: do not put credentials in it.
-
-### Native model integration
-
-The `AnthropicAgent` implements the [Claude Messages tool-use loop](https://platform.claude.com/docs/en/agents-and-tools/tool-use/handle-tool-calls). It is opt-in, validates tool-use structure, bounds turns/tokens, and records no API key in manifests.
-
-```bash
-# Set ANTHROPIC_API_KEY and TOOLCHAOS_MODEL in your shell first.
-node dist/cli.js scenario examples/scenario.json anthropic /tmp/toolchaos-model-001
-```
-
-Live calls incur provider usage and send the scenario/task and tool results to that provider. No live paid request was made during local verification. The adapter protocol is integration-tested against a controlled HTTP provider; model quality must be measured separately with repeated runs.
-
-```ts
-import { runScenario, ReferenceAgent } from '@ai-opensource-local/toolchaos';
-const result = await runScenario(scenario, new ReferenceAgent('reconcile'), '/tmp/new-run');
-```
-
-An `AgentAdapter` implements `name`, credential-free `metadata`, and `run(tools, task, signal)`. The coordinator provides only discovered fixture tools and applies the same ground-truth assertions for every adapter.
-
-## Repeated runs and local history
-
-```bash
-node dist/cli.js suite examples/scenario.json idempotent /tmp/toolchaos-series-001 3
-node dist/cli.js history /tmp/toolchaos-series-001/runs.sqlite
-```
-
-`runSeries(scenario, agentFactory, directory, repeats, {signal})` creates a fresh
-agent and MCP fixture for each run. Its summary reports passed, failed,
-inconclusive, not-run and executed counts; the pass fraction includes incomplete
-executed runs in its denominator. It is an observation of this sample, not a
-reliability guarantee. SQLite schema 1 stores hashes and paths to immutable run
-manifests. `RunStore.record(id, directory)`, `.list(limit)` and `.close()` expose
-the metadata index; duplicate IDs/artifact paths are rejected. Node may print an
-experimental warning for its bundled SQLite API. Preserve the database together
-with its run directories; there is no migration from an unknown schema.
-
-Configuration shape: [JSON Schema](schemas/scenario.schema.json). Runtime validation additionally enforces cross-field deadlines, duplicate IDs and supported operations. Generated `dist/index.d.ts` exposes the current SDK.
+Contributions are welcome through [issues](https://github.com/Balaji91221/toolchaos/issues) and pull requests. Read [CONTRIBUTING.md](CONTRIBUTING.md) before changing an adapter or assertion. Original code is available under the [MIT license](LICENSE).

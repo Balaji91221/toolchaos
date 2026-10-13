@@ -1,0 +1,19 @@
+SCENARIO        lost-response-ticket
+RECOVERY        reference-reconcile
+FAULT           drop_response_after_forward
+VERDICT         PASS
+FINAL TICKETS   1
+
+ASSERTIONS
+PASS            ticket_count: actual 1, expected 1
+PASS            bounded_tool_calls: actual 2, expected 5
+
+OBSERVED TOOL EVENTS
+request_received  create_ticket
+request_forwarded  create_ticket
+upstream_response_received  create_ticket
+fault_applied     create_ticket
+request_received  find_ticket
+request_forwarded  find_ticket
+upstream_response_received  find_ticket
+response_delivered  find_ticket
